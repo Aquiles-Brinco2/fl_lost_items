@@ -1,13 +1,15 @@
 class Comment {
   final String id;
-  final String user; // ID del usuario
+  final String userId; // ID del usuario
+  final String userName; // Nombre del usuario
   final String post; // ID del post
   final String content;
   final String createdAt;
 
   Comment({
     required this.id,
-    required this.user,
+    required this.userId,
+    required this.userName, // Ahora incluimos el nombre
     required this.post,
     required this.content,
     required this.createdAt,
@@ -16,7 +18,8 @@ class Comment {
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
       id: json['_id'] ?? '',
-      user: json['user'] ?? '',
+      userId: json['user']['_id'] ?? '', // Obtiene el ID del usuario
+      userName: json['user']['name'] ?? '', // Obtiene el nombre del usuario
       post: json['post'] ?? '',
       content: json['content'] ?? '',
       createdAt: json['createdAt'] ?? '',

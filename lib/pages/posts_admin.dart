@@ -120,32 +120,90 @@ class _PostCardState extends State<PostCard> {
     }
   }
 
+  // Función para eliminar post con confirmación
   Future<void> _deletePost() async {
-    try {
-      await deletePost(widget
-          .post.id); // Llamamos a la nueva función deletePost pasando el postId
-      widget.onPostDeleted(); // Refrescamos la lista de posts
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error al eliminar la publicación')),
-      );
-    }
+    // Cuadro de confirmación
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar eliminación'),
+          content: const Text(
+              '¿Estás seguro de que deseas eliminar esta publicación?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el cuadro de diálogo
+              },
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Cerrar el cuadro de diálogo
+                try {
+                  await deletePost(widget.post.id);
+                  widget.onPostDeleted(); // Refrescar la lista de posts
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Publicación eliminada')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Error al eliminar la publicación')),
+                  );
+                }
+              },
+              child:
+                  const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  // Método para eliminar un comentario
+  // Función para eliminar comentario con confirmación
   Future<void> _deleteComment(String commentId) async {
-    try {
-      await deleteComment(
-          commentId); // Llamamos al servicio de eliminación del comentario
-      setState(() {
-        futureComments = fetchCommentsByPostId(
-            widget.post.id); // Refrescamos los comentarios
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error al eliminar el comentario')),
-      );
-    }
+    // Cuadro de confirmación
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar eliminación'),
+          content: const Text(
+              '¿Estás seguro de que deseas eliminar este comentario?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el cuadro de diálogo
+              },
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Cerrar el cuadro de diálogo
+                try {
+                  await deleteComment(commentId);
+                  setState(() {
+                    futureComments = fetchCommentsByPostId(widget.post.id);
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Comentario eliminado')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Error al eliminar el comentario')),
+                  );
+                }
+              },
+              child:
+                  const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

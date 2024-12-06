@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:objetos_perdidos/pages/home_admin.dart';
 import 'package:objetos_perdidos/pages/login_screen.dart';
+import 'package:objetos_perdidos/pages/home_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,8 +16,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Objetos Perdidos',
       theme: ThemeData(
-        primaryColor: const Color(0xFFA50050), // Color personalizado
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5), // Fondo personalizado
+        primaryColor: const Color(0xFFA50050),
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(fontFamily: 'Parkinsans'),
           bodyMedium: TextStyle(fontFamily: 'Parkinsans'),
@@ -22,10 +25,10 @@ class MyApp extends StatelessWidget {
           displayMedium: TextStyle(fontFamily: 'Parkinsans'),
         ),
         appBarTheme: const AppBarTheme(
-          color: Color(0xFFA50050), // Color personalizado para AppBar
+          color: Color(0xFFA50050),
           iconTheme: IconThemeData(color: Colors.white),
           titleTextStyle: TextStyle(
-            fontFamily: 'Parkinsans', // Fuente personalizada
+            fontFamily: 'Parkinsans',
             color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -60,7 +63,48 @@ class MyApp extends StatelessWidget {
           prefixIconColor: const Color(0xFFA50050),
         ),
       ),
-      home: const LoginScreen(),
+      home: FutureBuilder<Map<String, dynamic>>(
+        future: checkLoggedIn(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const CircularProgressIndicator();
+          } else if (snapshot.hasError ||
+              !snapshot.hasData ||
+              !snapshot.data!['loggedIn']) {
+            return const LoginScreen();
+          } else {
+            final userType = snapshot.data!['userType'];
+            if (userType == 'admin') {
+              return const DashboardScreen(); // Redirige a DashboardScreen si es admin
+            } else {
+              return const HomeScreen(); // Redirige a HomeScreen si no es admin
+            }
+          }
+        },
+      ),
     );
+  }
+
+  // Función para verificar si el usuario está logueado y obtener su tipo
+  Future<Map<String, dynamic>> checkLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Verifica si el token existe, lo cual indica que el usuario está logueado
+    final token = prefs.getString('token');
+    if (token == null || token.isEmpty) {
+      return {
+        'loggedIn': false,
+        'userType': ''
+      }; // Si no está logueado, devuelve false y un userType vacío
+    }
+
+    // Si está logueado, obtiene el tipo de usuario
+    final userType = prefs.getString('user_type') ??
+        ''; // Obtiene el tipo de usuario ('admin' o no)
+
+    return {
+      'loggedIn': true,
+      'userType': userType
+    }; // Devuelve que está logueado y el tipo de usuario
   }
 }

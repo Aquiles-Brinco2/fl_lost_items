@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:objetos_perdidos/pages/my_post_screen.dart';
 import 'package:objetos_perdidos/services/posts_update.dart';
 import 'package:objetos_perdidos/services/posts_delete.dart';
 import 'package:objetos_perdidos/services/main_class.dart';
@@ -131,14 +132,49 @@ class _EditPostScreenState extends State<EditPostScreen> {
   }
 
   Future<void> _deletePost() async {
-    try {
-      await deletePost(widget.post.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Publicación eliminada con éxito')),
-      );
-      Navigator.popUntil(context, ModalRoute.withName('/'));
-    } catch (e) {
-      _showError('Error al eliminar: $e');
+    // Mostrar el cuadro de confirmación antes de eliminar
+    bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('¿Estás seguro?'),
+          content: const Text(
+              '¿Estás seguro de que deseas eliminar esta publicación?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false); // El usuario cancela
+              },
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true); // El usuario confirma
+              },
+              child: const Text('Sí'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Si el usuario confirma, proceder con la eliminación
+    if (confirmDelete == true) {
+      try {
+        await deletePost(widget.post.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Publicación eliminada con éxito')),
+        );
+        // Redirige a la pantalla 'my_posts' (cambia '/my_posts' por la ruta que uses)
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MyPostsScreen(userId: ''),
+          ),
+        );
+      } catch (e) {
+        _showError('Error al eliminar: $e');
+      }
     }
   }
 

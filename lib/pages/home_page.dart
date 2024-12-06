@@ -5,12 +5,14 @@ import 'package:objetos_perdidos/pages/comment_sceen.dart';
 import 'package:objetos_perdidos/pages/my_post_screen.dart';
 import 'package:objetos_perdidos/pages/porfile_screen.dart';
 import 'package:objetos_perdidos/pages/post_create_screen.dart';
+import 'package:objetos_perdidos/services/comments_delete.dart';
 import 'package:objetos_perdidos/services/comments_get.dart';
 import 'package:objetos_perdidos/services/main_class.dart';
 import 'package:objetos_perdidos/services/posts_get.dart';
-
-// Pantalla de comentarios
-import 'package:intl/intl.dart'; // Para formatear la fecha
+import 'package:intl/intl.dart';
+import 'package:objetos_perdidos/services/posts_get_Encontrados.dart';
+import 'package:objetos_perdidos/services/posts_get_Perdidos.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Para formatear la fecha
 
 void main() {
   runApp(const LostAndFoundApp());
@@ -36,16 +38,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Post>> futurePosts;
   int _selectedIndex = 0;
+  bool isLost =
+      true; // Variable para saber si estamos viendo "Perdido" o "Encontrado"
 
   @override
   void initState() {
     super.initState();
-    futurePosts = fetchPosts();
+    futurePosts = fetchLostPosts(); // Por defecto, cargamos los posts perdidos
   }
 
+  // Función para refrescar los posts dependiendo del estado (perdido o encontrado)
   Future<void> _refreshPosts() async {
     setState(() {
-      futurePosts = fetchPosts();
+      futurePosts = isLost ? fetchLostPosts() : fetchFoundPosts();
     });
   }
 
@@ -80,45 +85,94 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Función para manejar los botones de "Perdido" y "Encontrado"
+  void _toggleLostFound(bool isLostStatus) {
+    setState(() {
+      isLost = isLostStatus;
+      futurePosts = isLost ? fetchLostPosts() : fetchFoundPosts();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Objetos Perdidos'),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshPosts,
-        child: FutureBuilder<List<Post>>(
-          future: futurePosts,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(
-                  child: Text('No hay publicaciones disponibles.'));
-            }
+      body: Column(
+        children: [
+          // Botones para filtrar entre "Perdido" y "Encontrado"
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () =>
+                      _toggleLostFound(true), // Mostrar los perdidos
+                  child: const Text(
+                    'Perdido',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 15.0, horizontal: 30.0),
+                    minimumSize: Size(150, 50),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () =>
+                      _toggleLostFound(false), // Mostrar los encontrados
+                  child: const Text(
+                    'Encontrado',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 15.0, horizontal: 30.0),
+                    minimumSize: Size(150, 50),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Aquí es donde se muestran los posts
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refreshPosts,
+              child: FutureBuilder<List<Post>>(
+                future: futurePosts,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                        child: Text('No hay publicaciones disponibles.'));
+                  }
 
-            final posts = snapshot.data!;
-            return ListView.builder(
-              itemCount: posts.length,
-              itemBuilder: (context, index) {
-                final post = posts[index];
-                return PostCard(post: post);
-              },
-            );
-          },
-        ),
+                  final posts = snapshot.data!;
+                  return ListView.builder(
+                    itemCount: posts.length,
+                    itemBuilder: (context, index) {
+                      final post = posts[index];
+                      return PostCard(post: post);
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        backgroundColor: Colors.blue, // Color de fondo igual al banner
-        selectedItemColor:
-            Colors.red, // Color de los íconos seleccionados (rojo)
-        unselectedItemColor:
-            Colors.grey, // Color para los íconos no seleccionados
+        backgroundColor: Colors.blue,
+        selectedItemColor: Colors.red,
+        unselectedItemColor: Colors.red,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -137,11 +191,8 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Perfil',
           ),
         ],
-        // Modificar la apariencia de los íconos cuando son presionados
-        selectedIconTheme:
-            const IconThemeData(color: Colors.red), // Rojo al presionar
-        unselectedIconTheme: const IconThemeData(
-            color: Colors.grey), // Blanco cuando no está seleccionado
+        selectedIconTheme: const IconThemeData(color: Colors.red),
+        unselectedIconTheme: const IconThemeData(color: Colors.white),
         showSelectedLabels: true,
         showUnselectedLabels: true,
       ),
@@ -160,12 +211,65 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard> {
   late Future<List<Comment>> futureComments;
+  String? currentUserId;
 
   @override
   void initState() {
     super.initState();
-    // Cargar los comentarios asociados a la publicación
-    futureComments = fetchCommentsByPostId(widget.post.id);
+    futureComments =
+        fetchCommentsByPostId(widget.post.id); // Obtener los comentarios
+    _loadCurrentUserId(); // Cargar el ID del usuario actual
+  }
+
+  // Cargar el ID del usuario desde SharedPreferences
+  _loadCurrentUserId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      currentUserId =
+          prefs.getString('user_id'); // Obtener el ID del usuario actual
+    });
+  }
+
+  // Función para borrar el comentario
+  Future<void> _deleteComment(String commentId) async {
+    try {
+      await deleteComment(commentId); // Llamar al servicio de eliminación
+      setState(() {
+        futureComments =
+            fetchCommentsByPostId(widget.post.id); // Refrescar los comentarios
+      });
+    } catch (e) {
+      print('Error al eliminar el comentario: $e');
+    }
+  }
+
+  // Mostrar un cuadro de confirmación para borrar el comentario
+  _showDeleteConfirmationDialog(String commentId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar eliminación'),
+          content:
+              const Text('¿Está seguro de que quiere borrar este comentario?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                _deleteComment(commentId); // Llamar a la función de eliminación
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+              child: const Text('Borrar', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildImage() {
@@ -297,9 +401,9 @@ class _PostCardState extends State<PostCard> {
                                         radius: 15,
                                         backgroundColor: Colors.blue,
                                         child: Text(
-                                          comment.user.isNotEmpty
-                                              ? comment.user[
-                                                  0] // Mostrar inicial del autor
+                                          comment.userName.isNotEmpty
+                                              ? comment.userName[
+                                                  0] // Inicial del autor
                                               : 'U', // Valor por defecto
                                           style: const TextStyle(
                                               color: Colors.white),
@@ -312,7 +416,7 @@ class _PostCardState extends State<PostCard> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'Usuario: ${comment.user}', // Aquí puedes mostrar el nombre de usuario
+                                              'Usuario: ${comment.userName}', // Nombre de usuario
                                               style: const TextStyle(
                                                   fontWeight: FontWeight.bold),
                                             ),
@@ -327,6 +431,16 @@ class _PostCardState extends State<PostCard> {
                                           ],
                                         ),
                                       ),
+                                      // Mostrar el botón de borrar solo si el usuario es el mismo
+                                      if (currentUserId == comment.userId)
+                                        IconButton(
+                                          icon: const Icon(Icons.delete,
+                                              color: Colors.red),
+                                          onPressed: () {
+                                            _showDeleteConfirmationDialog(comment
+                                                .id); // Mostrar diálogo de confirmación
+                                          },
+                                        ),
                                     ],
                                   ),
                                 ))

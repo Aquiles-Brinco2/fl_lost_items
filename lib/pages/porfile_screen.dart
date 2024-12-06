@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:objetos_perdidos/services/logout.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
+import 'package:objetos_perdidos/pages/login_screen.dart'; // Importar la pantalla de Login
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -50,6 +52,38 @@ class ProfileScreen extends StatelessWidget {
       return const CircleAvatar(
         radius: 50,
         backgroundImage: AssetImage('assets/images/skibidihomero.png'),
+      );
+    }
+  }
+
+  // Método para manejar el cierre de sesión
+  Future<void> _handleLogout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    String? userId = prefs.getString('user_id');
+    String? token = prefs.getString('token'); // Obtener el token almacenado
+
+    if (userId != null && token != null) {
+      // Llamar al servicio de logout
+      AuthService authService = AuthService();
+      bool logoutSuccess = await authService.logout(userId, token);
+
+      if (logoutSuccess) {
+        // Si el logout fue exitoso, limpiar las preferencias y navegar al login
+        await authService.clearUserData(); // Limpiar los datos de usuario
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      } else {
+        // Si hubo un error al hacer logout
+        print('Error al hacer logout en el servidor');
+      }
+    } else {
+      // Si no hay userId o token, solo limpiar las preferencias y navegar al login
+      await AuthService().clearUserData();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     }
   }
@@ -114,6 +148,19 @@ class ProfileScreen extends StatelessWidget {
                     Text(
                       'ID de Usuario: ${userInfo['userId']}',
                       style: const TextStyle(fontSize: 18),
+                    ),
+
+                    // Botón de Cerrar Sesión
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      onPressed: () => _handleLogout(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors
+                            .red, // Color rojo para el botón de cerrar sesión
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 30, vertical: 12),
+                      ),
+                      child: const Text('Cerrar Sesión'),
                     ),
                   ],
                 ),
